@@ -23,6 +23,27 @@ var Key = {
 window.addEventListener('keyup', function(event) { Key.onKeyup(event); }, false);
 window.addEventListener('keydown', function(event) { Key.onKeydown(event); }, false);
 
+function RGB2Color(r,g,b) { return '0x' + byte2Hex(r) + byte2Hex(g) + byte2Hex(b); }
+function byte2Hex(n) {
+	var nybHexString = "0123456789ABCDEF";
+	return String(nybHexString.substr((n >> 4) & 0x0F,1)) + nybHexString.substr(n & 0x0F,1);
+}
+
+var colourList = [];
+function makeColorGradient(frequency1, frequency2, frequency3, phase1, phase2, phase3, center, width, len) {
+	if (center == undefined)   center = 128;
+	if (width == undefined)    width = 127;
+	if (len == undefined)      len = 50;
+
+	for (var i = 0; i < len; ++i) {
+		var red = Math.sin(frequency1*i + phase1) * width + center;
+		var grn = Math.sin(frequency2*i + phase2) * width + center;
+		var blu = Math.sin(frequency3*i + phase3) * width + center;
+		
+		colourList.push(RGB2Color(red,grn,blu));
+	}
+}
+makeColorGradient(.3,.3,.3,0,2,4);
 
 var scene = {
 	width: 800,
@@ -41,8 +62,22 @@ document.body.appendChild(renderer.view);
 
 requestAnimFrame( animate );
 
-var texture = PIXI.Texture.fromImage("images/bunny.png");
-var bunny = new PIXI.Sprite(texture);
+var groundTile = new PIXI.TilingSprite (PIXI.Texture.fromImage("images/tile-ground.png"), scene.width, 100);
+
+	groundTile.position.x = 0;
+	groundTile.position.y = scene.height - 100;
+
+	groundTile.frameCount = 0;
+	groundTile.update = function() {
+		groundTile.tint = colourList[groundTile.frameCount];
+	}
+
+	groundTile.timer = setInterval(function() {
+		groundTile.frameCount++;
+		if (groundTile.frameCount >= colourList.length) groundTile.frameCount = 0;
+	}, 90);
+
+var bunny = new PIXI.Sprite(PIXI.Texture.fromImage("images/bunny.png"));
 
 	bunny.anchor.x = 0.5;
 	bunny.anchor.y = 0.5;
@@ -69,18 +104,21 @@ var bunny = new PIXI.Sprite(texture);
 	bunny.onTheGround = false;
 	bunny.isJumping = false;
 
-var ground = scene.height;
+var ground = scene.height - groundTile.height;
 
+stage.addChild(groundTile);
 stage.addChild(bunny);
+
 
 function animate() {
 
 	requestAnimFrame( animate );
 	
 	renderer.render(stage);
-
-	bunny.update();
+	
 	updateTime();
+	bunny.update();
+	groundTile.update();
 
 }
 
