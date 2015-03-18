@@ -62,15 +62,16 @@ document.body.appendChild(renderer.view);
 
 requestAnimFrame( animate );
 
-var groundTile = new PIXI.TilingSprite (PIXI.Texture.fromImage("images/tile-ground.png"), scene.width, 100);
+var groundTile = new PIXI.TilingSprite (PIXI.Texture.fromImage("images/tile-ground.png"), scene.width, 32);
 
 	groundTile.position.x = 0;
-	groundTile.position.y = scene.height - 100;
+	groundTile.position.y = scene.height - 32;
 
 	groundTile.frameCount = 0;
 	groundTile.update = function() {
-		groundTile.tint = colourList[groundTile.frameCount];
+		// groundTile.tint = colourList[groundTile.frameCount];
 	}
+	groundTile.tint = 0x49cc28;
 
 	groundTile.timer = setInterval(function() {
 		groundTile.frameCount++;
