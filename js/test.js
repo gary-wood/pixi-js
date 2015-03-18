@@ -34,7 +34,7 @@ var scene = {
 	timeSinceLastFrame: 0
 };
 
-var stage = new PIXI.Stage(0x66FF99);
+var stage = new PIXI.Stage(0x57D6DB);
 var renderer = PIXI.autoDetectRenderer(scene.width, scene.height);
 
 document.body.appendChild(renderer.view);
@@ -136,20 +136,29 @@ bunny.update = function() {
 		bunny.velocity.x = 0;
 	}
 
-	
-
 	if (bunny.velocity.x !== 0) {
-		bunny.rotation += (bunny.speed.r * bunny.velocity.x) * 0.05;	
+		if ((bunny.velocity.x < 0 && bunny.rotation > (bunny.velocity.limitsX.min * 0.1)) ||
+			(bunny.velocity.x > 0 && bunny.rotation < (bunny.velocity.limitsX.max * 0.1))) {
+				bunny.rotation += (bunny.speed.r * bunny.velocity.x) * 0.05;
+		}
 	} else {
 		if (bunny.rotation < 0) {
-			bunny.rotation += bunny.speed.r * 0.75;
+			bunny.rotation += (bunny.rotation * -1) / 5;
 		} else if (bunny.rotation > 0) {
-			bunny.rotation -= bunny.speed.r * 0.75;
+			bunny.rotation -= bunny.rotation / 5;
 		}
 	}
 
 	bunny.position.y += bunny.speed.y * bunny.velocity.y;
 	bunny.position.x += bunny.speed.x * bunny.velocity.x;
+
+	if (bunny.position.x > scene.width + (bunny.width * 2)) {
+		bunny.position.x = 0 - (bunny.width * 2);
+	}
+
+	if (bunny.position.x < 0 - (bunny.width * 2)) {
+		bunny.position.x = scene.width + (bunny.width * 2);
+	}
 
 }
 
