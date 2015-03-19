@@ -1,205 +1,309 @@
+(function myTestGame() {
 
-var Key = {
-	_pressed: {},
+	var Game = function() {
 
-	LEFT: 37,
-	UP: 38,
-	RIGHT: 39,
-	DOWN: 40,
+		this.renderer = null;
 
-	isDown: function(keyCode) {
-		return this._pressed[keyCode];
-	},
-
-	onKeydown: function(event) {
-		this._pressed[event.keyCode] = true;
-	},
-
-	onKeyup: function(event) {
-		delete this._pressed[event.keyCode];
-	}
-};
-
-window.addEventListener('keyup', function(event) { Key.onKeyup(event); }, false);
-window.addEventListener('keydown', function(event) { Key.onKeydown(event); }, false);
-
-function RGB2Color(r,g,b) { return '0x' + byte2Hex(r) + byte2Hex(g) + byte2Hex(b); }
-function byte2Hex(n) {
-	var nybHexString = "0123456789ABCDEF";
-	return String(nybHexString.substr((n >> 4) & 0x0F,1)) + nybHexString.substr(n & 0x0F,1);
-}
-
-var colourList = [];
-function makeColorGradient(frequency1, frequency2, frequency3, phase1, phase2, phase3, center, width, len) {
-	if (center == undefined)   center = 128;
-	if (width == undefined)    width = 127;
-	if (len == undefined)      len = 50;
-
-	for (var i = 0; i < len; ++i) {
-		var red = Math.sin(frequency1*i + phase1) * width + center;
-		var grn = Math.sin(frequency2*i + phase2) * width + center;
-		var blu = Math.sin(frequency3*i + phase3) * width + center;
+		this.scene = {
+			gravity: 1,
+			lastTime: Date.now(),
+			timeSinceLastFrame: 0,
+			stage: new PIXI.Stage(0x57D6DB),
+			assets: []
+		};
 		
-		colourList.push(RGB2Color(red,grn,blu));
-	}
-}
-makeColorGradient(.3,.3,.3,0,2,4);
+		this.init = function(sceneParams) {
 
-var scene = {
-	width: 800,
-	height: 300,
+			var self = this;
+			var scene = self.scene;
 
-	gravity: 1,
+			for (setting in sceneParams) {
+				scene[setting] = sceneParams[setting];
+			}
 
-	lastTime: Date.now(),
-	timeSinceLastFrame: 0
-};
+			this.renderer = PIXI.autoDetectRenderer(scene.width, scene.height);
 
-var stage = new PIXI.Stage(0x57D6DB);
-var renderer = PIXI.autoDetectRenderer(scene.width, scene.height);
+			document.body.appendChild( this.renderer.view );
 
-document.body.appendChild(renderer.view);
+			this.createAssets();
 
-requestAnimFrame( animate );
+			this.bindListeners();
 
-var groundTile = new PIXI.TilingSprite (PIXI.Texture.fromImage("images/tile-ground.png"), scene.width, 32);
+			for (var asset = 0; asset < scene.assets.length; asset++) {
+				scene.stage.addChild(scene.assets[asset]);
+			}
 
-	groundTile.position.x = 0;
-	groundTile.position.y = scene.height - 32;
+			requestAnimFrame( animate.bind(self) );
 
-	groundTile.frameCount = 0;
-	groundTile.update = function() {
-		// groundTile.tint = colourList[groundTile.frameCount];
-	}
-	groundTile.tint = 0x49cc28;
+		};
 
-	groundTile.timer = setInterval(function() {
-		groundTile.frameCount++;
-		if (groundTile.frameCount >= colourList.length) groundTile.frameCount = 0;
-	}, 90);
+		var animate = function() {
+			requestAnimFrame( animate.bind(this) );
+			
+			this.renderer.render( this.scene.stage );
+			
+			this.updateTime();
 
-var bunny = new PIXI.Sprite(PIXI.Texture.fromImage("images/bunny.png"));
+			for (var asset = 0; asset < this.scene.assets.length; asset++) {
+				var drawEl = this.scene.assets[asset];
 
-	bunny.anchor.x = 0.5;
-	bunny.anchor.y = 0.5;
+				if (typeof drawEl.update === 'function') {
+					drawEl.update();
+				}
+			}
+		};
+	
+	};
 
-	bunny.position.x = scene.width / 2;
-	bunny.position.y = -bunny.height;
+	var Key = {
+		_pressed: {},
 
-	bunny.velocity = {
-		x: 0,
-		y: 0,
+		LEFT: 37,
+		UP: 38,
+		RIGHT: 39,
+		DOWN: 40,
+		SPACE: 32,
 
-		limitsX: {
-			min: -8,
-			max: 8
+		isDown: function(keyCode) {
+			return this._pressed[keyCode];
+		},
+
+		onKeydown: function(event) {
+			this._pressed[event.keyCode] = true;
+		},
+
+		onKeyup: function(event) {
+			delete this._pressed[event.keyCode];
 		}
 	};
 
-	bunny.speed = {
-		x: 0.75,
-		y: 0.75,
-		r: 0.1
+	Game.prototype.bindListeners = function() {
+		window.addEventListener('keyup', function(event) { Key.onKeyup(event); }, false);
+		window.addEventListener('keydown', function(event) { Key.onKeydown(event); }, false);
 	};
 
-	bunny.onTheGround = false;
-	bunny.isJumping = false;
+	Game.prototype.updateTime = function() {
+		var now = Date.now()
 
-var ground = scene.height - groundTile.height;
+		this.scene.timeSinceLastFrame = now - this.scene.lastTime;
+		this.scene.lastTime = now;
+	};
 
-stage.addChild(groundTile);
-stage.addChild(bunny);
+	Game.prototype.animate = function() {
+		
+		var self = Game;
 
+		requestAnimFrame( animate );
+		
+		this.renderer.render( this.scene.stage );
+		
+		this.updateTime();
+		bunny.update();
+		groundTile.update();
 
-function animate() {
-
-	requestAnimFrame( animate );
-	
-	renderer.render(stage);
-	
-	updateTime();
-	bunny.update();
-	groundTile.update();
-
-}
-
-function updateTime() {
-	var now = Date.now()
-
-	scene.timeSinceLastFrame = now - scene.lastTime;
-	scene.lastTime = now;
-}
-
-bunny.update = function() {
-
-	bunny.onTheGround = (bunny.position.y >= ground - (bunny.height / 2));
-
-	if (!bunny.onTheGround && !bunny.isJumping) bunny.velocity.y += scene.gravity;
-	
-	if (bunny.onTheGround) {
-		bunny.position.y = ground - (bunny.height / 2);
-		bunny.velocity.y = 0;
 	}
 
-	if (bunny.isJumping) {
-		if (bunny.onTheGround) {
-			bunny.velocity.y = -40;
-		} else {
-			bunny.velocity.y += (scene.gravity * scene.timeSinceLastFrame) / 2;
-		}
-
-		if (bunny.velocity.y >= 0) { bunny.isJumping = false; }
+	function animate() {
+		Game.animate();
 	}
 
-	if (Key.isDown(Key.UP))	{
-		if (bunny.onTheGround) {
-			bunny.isJumping = true;
-		}
+	Game.prototype.createAssets = function() {
+
+		var scene = this.scene;
+
+		var groundTile = new PIXI.TilingSprite (PIXI.Texture.fromImage("images/tile-ground.png"), scene.width, 32);
+
+			groundTile.position.x = 0;
+			groundTile.position.y = scene.height - 32;
+
+			groundTile.frameCount = 0;
+			
+			groundTile.update = function() {}
+			
+			groundTile.tint = 0x49cc28;
+
+		scene.assets.push(groundTile);
+
+		var ground = scene.height - groundTile.height;
+
+		var bunny = new PIXI.Sprite(PIXI.Texture.fromImage("images/bunny.png"));
+
+			bunny.anchor.x = 0.5;
+			bunny.anchor.y = 0.5;
+
+			bunny.position.x = scene.width / 2;
+			bunny.position.y = -bunny.height;
+
+			bunny.velocity = {
+				x: 0,
+				y: 0,
+
+				limitsX: {
+					min: -8.5,
+					max: 8.5
+				}
+			};
+
+			bunny.speed = {
+				x: 1,
+				y: 0.75,
+				r: 0.5
+			};
+
+			bunny.onTheGround = false;
+			bunny.isJumping = false;
+			bunny.isPewpew = false;
+
+			bunny.update = function() {
+
+				bunny.onTheGround = (bunny.position.y >= ground - (bunny.height / 2));
+
+				if (!bunny.onTheGround && !bunny.isJumping) bunny.velocity.y += scene.gravity;
+				
+				if (bunny.onTheGround) {
+					bunny.position.y = ground - (bunny.height / 2);
+					bunny.velocity.y = 0;
+				}
+
+				if (bunny.isJumping) {
+					if (bunny.onTheGround) {
+						bunny.velocity.y = -40;
+					} else {
+						bunny.velocity.y += (scene.gravity * scene.timeSinceLastFrame) / 2;
+					}
+
+					if (bunny.velocity.y >= 0) { bunny.isJumping = false; }
+				}
+
+				if (Key.isDown(Key.UP))	{
+					if (bunny.onTheGround) {
+						bunny.isJumping = true;
+					}
+				}
+
+				if (Key.isDown(Key.LEFT)) {
+					if (bunny.velocity.x > bunny.velocity.limitsX.min) {
+						bunny.velocity.x -= bunny.speed.x * scene.timeSinceLastFrame;
+					}
+				}
+
+				if (Key.isDown(Key.RIGHT)) {
+					if (bunny.velocity.x < bunny.velocity.limitsX.max) {
+						bunny.velocity.x += bunny.speed.x * scene.timeSinceLastFrame;
+					}
+				}
+
+				if (!Key.isDown(Key.LEFT) && !Key.isDown(Key.RIGHT)) {
+					bunny.velocity.x = 0;
+				}
+
+				if (Key.isDown(Key.SPACE)) {
+					bunny.isPewpew = true;
+					scene.stage.addChild(pewpew);
+					pewpew.update();
+				} else {
+					bunny.isPewpew = false;
+					pewpew.reset();
+				}
+
+				if (bunny.velocity.x !== 0) {
+					if ((bunny.velocity.x < 0 && bunny.rotation > (bunny.velocity.limitsX.min * 0.1)) ||
+						(bunny.velocity.x > 0 && bunny.rotation < (bunny.velocity.limitsX.max * 0.1))) {
+							bunny.rotation += (bunny.speed.r * bunny.velocity.x) * 0.02;
+					}
+
+					if (bunny.velocity.x < 0 && bunny.velocity.x < bunny.velocity.limitsX.min) bunny.velocity.x = bunny.velocity.limitsX.min;
+					if (bunny.velocity.x > 0 && bunny.velocity.x > bunny.velocity.limitsX.max) bunny.velocity.x = bunny.velocity.limitsX.max;
+				} else {
+					if (bunny.rotation < 0) {
+						bunny.rotation += (bunny.rotation * -1) / 5;
+					} else if (bunny.rotation > 0) {
+						bunny.rotation -= bunny.rotation / 5;
+					}
+				}
+
+				bunny.position.y += bunny.speed.y * bunny.velocity.y;
+				bunny.position.x += bunny.speed.x * bunny.velocity.x;
+
+				if (bunny.position.x > scene.width + (bunny.width * 2)) {
+					bunny.position.x = 0 - (bunny.width * 2);
+				}
+
+				if (bunny.position.x < 0 - (bunny.width * 2)) {
+					bunny.position.x = scene.width + (bunny.width * 2);
+				}
+
+			}
+
+		scene.assets.push(bunny);
+
+		var pewpew = new PIXI.Sprite.fromImage("images/pewpew_green.png");
+
+			pewpew.anchor.x = 0;
+			pewpew.anchor.y = 0.5;
+
+			pewpew.scale.x = 20; /*0.8 + Math.random() * 0.3;*/
+			pewpew.scale.y = 1;
+
+			pewpew.position.x = bunny.position.x - (bunny.width / 2);
+			pewpew.position.y = bunny.position.y + 5;
+
+			pewpew.blendMode = PIXI.blendModes.ADD;
+
+			pewpew.direction = Math.random() * Math.PI * 2;
+
+			pewpew.settings = {
+				tick: 0
+			};
+
+			pewpew.update = function() {
+				pewpew.position.x = bunny.position.x - (bunny.width / 2);
+				pewpew.position.y = bunny.position.y + 5;
+
+				pewpew.settings.tick++;
+
+				if (bunny.isPewpew) {
+					console.log('pew!');
+					var pos1 = new PIXI.Point(bunny.position.x - (bunny.width / 2), bunny.position.y + 5);
+					var pos2 = new PIXI.Point(scene.width, Math.random() * scene.height + 20);
+
+					distX = pos1.x - pos2.x;
+					distY = pos1.y - pos2.y;
+
+					var dist = Math.sqrt(distX * distY + distY * distY) + 40;
+					pewpew.scale.x = dist / 20;
+				}
+
+				if (pewpew.settings.tick > 200 * 0.3) {
+					pewpew.alpha *= 0.9;
+					pewpew.scale.y = pewpew.alpha;
+				}
+
+				if (pewpew.alpha <= 0.09) {
+					pewpew.reset();
+				}
+
+				console.log(pewpew.alpha, pewpew.settings.tick);
+			}
+
+			pewpew.reset = function() {
+				bunny.isPewpew = false;
+				pewpew.alpha = 1;
+				pewpew.scale.y = 1;
+				pewpew.settings.tick = 0;				
+			}
+
+		// scene.assets.push(pewpew);
+
 	}
 
-	if (Key.isDown(Key.LEFT)) {
-		if (bunny.velocity.x > bunny.velocity.limitsX.min) {
-			bunny.velocity.x -= bunny.speed.x * scene.timeSinceLastFrame;
-		}
-	}
 
-	if (Key.isDown(Key.DOWN)) {}
 
-	if (Key.isDown(Key.RIGHT)) {
-		if (bunny.velocity.x < bunny.velocity.limitsX.max) {
-			bunny.velocity.x += bunny.speed.x * scene.timeSinceLastFrame;
-		}
-	}
 
-	if (!Key.isDown(Key.LEFT) && !Key.isDown(Key.RIGHT)) {
-		bunny.velocity.x = 0;
-	}
+	var game = new Game();
+		game.init({width: 800, height: 300});
 
-	if (bunny.velocity.x !== 0) {
-		if ((bunny.velocity.x < 0 && bunny.rotation > (bunny.velocity.limitsX.min * 0.1)) ||
-			(bunny.velocity.x > 0 && bunny.rotation < (bunny.velocity.limitsX.max * 0.1))) {
-				bunny.rotation += (bunny.speed.r * bunny.velocity.x) * 0.05;
-		}
-	} else {
-		if (bunny.rotation < 0) {
-			bunny.rotation += (bunny.rotation * -1) / 5;
-		} else if (bunny.rotation > 0) {
-			bunny.rotation -= bunny.rotation / 5;
-		}
-	}
-
-	bunny.position.y += bunny.speed.y * bunny.velocity.y;
-	bunny.position.x += bunny.speed.x * bunny.velocity.x;
-
-	if (bunny.position.x > scene.width + (bunny.width * 2)) {
-		bunny.position.x = 0 - (bunny.width * 2);
-	}
-
-	if (bunny.position.x < 0 - (bunny.width * 2)) {
-		bunny.position.x = scene.width + (bunny.width * 2);
-	}
-
-}
+})();
 
 
 
